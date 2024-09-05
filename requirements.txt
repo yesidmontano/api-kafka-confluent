@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+confluent-kafka
+faker
+numpy
+python-dotenv

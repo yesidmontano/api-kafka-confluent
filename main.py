@@ -165,10 +165,12 @@ async def process_transaction(transaction_data):
             svc_fraud_prob[0], svc_non_fraud_prob[0],
             tree_pred[0][1], tree_pred[0][0]
         ))
-        conn.commit()
+        conn.commit()  # Confirma la transacción solo si todo ha ido bien
         logger.info("Transacción almacenada en la base de datos.")
     except Exception as e:
+        conn.rollback()  # Deshacer la transacción en caso de error
         logger.error(f"Error al procesar la transacción: {str(e)}")
+
 
 # Ruta para iniciar la tarea de consumo en segundo plano
 @app.get("/start-consuming")

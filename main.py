@@ -11,6 +11,8 @@ import os
 from dotenv import load_dotenv
 import asyncio
 import logging
+from tensorflow.keras.models import load_model
+from tensorflow.keras.optimizers.legacy import Adam
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +51,9 @@ try:
         svc_fraud REAL,
         svc_non_fraud REAL,
         decision_tree_fraud REAL,
-        decision_tree_non_fraud REAL
+        decision_tree_non_fraud REAL,
+        keras_fraud REAL,
+        keras_non_fraud REAL
     )
     """)
     conn.commit()
@@ -63,6 +67,8 @@ try:
     knears_neighbors = joblib.load('/app/model/knears_neighbors_model.pkl')
     svc = joblib.load('/app/model/svc_model.pkl')
     tree_clf = joblib.load('/app/model/decision_tree_model.pkl')
+    keras_model = load_model('/app/model/undersample_model.h5')
+    keras_model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
     logger.info("Modelos cargados exitosamente.")
 except Exception as e:
     logger.error(f"Error al cargar los modelos: {str(e)}")
@@ -135,7 +141,12 @@ async def process_transaction(transaction_data):
         svc_non_fraud_prob = 1 - svc_fraud_prob
 
         tree_pred = tree_clf.predict_proba(input_array)
-        logger.info(f"Predicciones: logistic_reg={logistic_reg_pred}, knears_neighbors={knears_neighbors_pred}, svc={svc_fraud_prob}, tree={tree_pred}")
+        keras_pred = keras_model.predict(input_array)
+        
+        fraud_probability = float(keras_pred[0][1])
+        non_fraud_probability = float(keras_pred[0][0])
+
+        logger.info(f"Predicciones: logistic_reg={logistic_reg_pred}, knears_neighbors={knears_neighbors_pred}, svc={svc_fraud_prob}, tree={tree_pred}, keras={keras_pred}")
 
         # Convertir los valores np.float64 a float de Python
         logistic_reg_pred = logistic_reg_pred.astype(float)
@@ -154,22 +165,23 @@ async def process_transaction(transaction_data):
                 logistic_regression_fraud, logistic_regression_non_fraud,
                 kneighbors_fraud, kneighbors_non_fraud,
                 svc_fraud, svc_non_fraud,
-                decision_tree_fraud, decision_tree_non_fraud
+                decision_tree_fraud, decision_tree_non_fraud,
+                keras_fraud, keras_non_fraud
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             transaction_json,
             float(logistic_reg_pred[0][1]), float(logistic_reg_pred[0][0]),
             float(knears_neighbors_pred[0][1]), float(knears_neighbors_pred[0][0]),
             float(svc_fraud_prob[0]), float(svc_non_fraud_prob[0]),
-            float(tree_pred[0][1]), float(tree_pred[0][0])
+            float(tree_pred[0][1]), float(tree_pred[0][0]),
+            fraud_probability, non_fraud_probability
         ))
         conn.commit()
         logger.info("Transacción almacenada en la base de datos.")
     except Exception as e:
         conn.rollback()  # Deshacer la transacción en caso de error
         logger.error(f"Error al procesar la transacción: {str(e)}")
-
 
 # Ruta para iniciar la tarea de consumo en segundo plano
 @app.get("/start-consuming")

@@ -137,13 +137,12 @@ async def process_transaction(transaction_data):
         tree_pred = tree_clf.predict_proba(input_array)
         logger.info(f"Predicciones: logistic_reg={logistic_reg_pred}, knears_neighbors={knears_neighbors_pred}, svc={svc_fraud_prob}, tree={tree_pred}")
 
-        # Validar las predicciones y asignar valores predeterminados en caso de ser necesario
-        if len(logistic_reg_pred[0]) < 2:
-            logistic_reg_pred = [[1, 0]]  # Asignar una predicción predeterminada
-        if len(knears_neighbors_pred[0]) < 2:
-            knears_neighbors_pred = [[1, 0]]  # Asignar una predicción predeterminada
-        if len(tree_pred[0]) < 2:
-            tree_pred = [[1, 0]]  # Asignar una predicción predeterminada
+        # Convertir los valores np.float64 a float de Python
+        logistic_reg_pred = logistic_reg_pred.astype(float)
+        knears_neighbors_pred = knears_neighbors_pred.astype(float)
+        svc_fraud_prob = svc_fraud_prob.astype(float)
+        svc_non_fraud_prob = svc_non_fraud_prob.astype(float)
+        tree_pred = tree_pred.astype(float)
 
         # Guardar el JSON completo en la base de datos
         transaction_json = json.dumps(transaction_data)
@@ -160,12 +159,12 @@ async def process_transaction(transaction_data):
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             transaction_json,
-            logistic_reg_pred[0][1], logistic_reg_pred[0][0],
-            knears_neighbors_pred[0][1], knears_neighbors_pred[0][0],
-            svc_fraud_prob[0], svc_non_fraud_prob[0],
-            tree_pred[0][1], tree_pred[0][0]
+            float(logistic_reg_pred[0][1]), float(logistic_reg_pred[0][0]),
+            float(knears_neighbors_pred[0][1]), float(knears_neighbors_pred[0][0]),
+            float(svc_fraud_prob[0]), float(svc_non_fraud_prob[0]),
+            float(tree_pred[0][1]), float(tree_pred[0][0])
         ))
-        conn.commit()  # Confirma la transacción solo si todo ha ido bien
+        conn.commit()
         logger.info("Transacción almacenada en la base de datos.")
     except Exception as e:
         conn.rollback()  # Deshacer la transacción en caso de error

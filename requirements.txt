@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-confluent-kafka
+confluent-kafka>=1.5.0
 faker
 numpy
 python-dotenv

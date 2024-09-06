@@ -59,10 +59,10 @@ except Exception as e:
 
 # Cargar los modelos entrenados
 try:
-    log_reg = joblib.load('/app/models/logistic_regression_model.pkl')
-    knears_neighbors = joblib.load('/app/models/knears_neighbors_model.pkl')
-    svc = joblib.load('/app/models/svc_model.pkl')
-    tree_clf = joblib.load('/app/models/decision_tree_model.pkl')
+    log_reg = joblib.load('/app/model/logistic_regression_model.pkl')
+    knears_neighbors = joblib.load('/app/model/knears_neighbors_model.pkl')
+    svc = joblib.load('/app/model/svc_model.pkl')
+    tree_clf = joblib.load('/app/model/decision_tree_model.pkl')
     logger.info("Modelos cargados exitosamente.")
 except Exception as e:
     logger.error(f"Error al cargar los modelos: {str(e)}")
